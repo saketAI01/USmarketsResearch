@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+universe.db
+stock_evaluate.log
+ALLAPI/
+.agents/
+.idea/
+.vscode/
+.DS_Store
