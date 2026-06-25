@@ -98,6 +98,43 @@ class Worker(QRunnable):
             self.signals.done.emit()
 
 
+class NumericTableWidgetItem(QTableWidgetItem):
+    """Decouples DisplayRole from EditRole so we can display '—' while storing a sortable numeric value."""
+    def __init__(self, display_val="", edit_val=0.0):
+        super().__init__()
+        self._display_val = display_val
+        self._edit_val = edit_val
+
+    def data(self, role):
+        if role == Qt.DisplayRole:
+            return self._display_val
+        if role == Qt.EditRole:
+            return self._edit_val
+        return super().data(role)
+
+    def setData(self, role, value):
+        if role == Qt.DisplayRole:
+            self._display_val = value
+            super().setData(role, value)
+        elif role == Qt.EditRole:
+            self._edit_val = value
+        else:
+            super().setData(role, value)
+
+    def __lt__(self, other):
+        if isinstance(other, QTableWidgetItem):
+            v1 = self.data(Qt.EditRole)
+            v2 = other.data(Qt.EditRole)
+            try:
+                return float(v1) < float(v2)
+            except (ValueError, TypeError):
+                try:
+                    return float(self.text()) < float(other.text())
+                except (ValueError, TypeError):
+                    return self.text() < other.text()
+        return super().__lt__(other)
+
+
 # ── Alpaca REST API Snapshot Client ──────────────────────────────────────────
 class AlpacaAPI:
     @staticmethod
@@ -618,22 +655,14 @@ class LiveFeedPage(QWidget):
             name_item.setForeground(QColor(C["sec"]))
             name_item.setTextAlignment(Qt.AlignLeft | Qt.AlignVCenter)
 
-            bid_p = QTableWidgetItem("—")
-            bid_p.setData(Qt.EditRole, -1.0)
-            bid_s = QTableWidgetItem("—")
-            bid_s.setData(Qt.EditRole, -1)
-            ask_p = QTableWidgetItem("—")
-            ask_p.setData(Qt.EditRole, -1.0)
-            ask_s = QTableWidgetItem("—")
-            ask_s.setData(Qt.EditRole, -1)
-            last_p = QTableWidgetItem("—")
-            last_p.setData(Qt.EditRole, -1.0)
-            chg_pct = QTableWidgetItem("—")
-            chg_pct.setData(Qt.EditRole, -9999.0)
-            last_s = QTableWidgetItem("—")
-            last_s.setData(Qt.EditRole, -1)
-            ticks = QTableWidgetItem("0")
-            ticks.setData(Qt.EditRole, 0)
+            bid_p = NumericTableWidgetItem("—", -1.0)
+            bid_s = NumericTableWidgetItem("—", -1)
+            ask_p = NumericTableWidgetItem("—", -1.0)
+            ask_s = NumericTableWidgetItem("—", -1)
+            last_p = NumericTableWidgetItem("—", -1.0)
+            chg_pct = NumericTableWidgetItem("—", -9999.0)
+            last_s = NumericTableWidgetItem("—", -1)
+            ticks = NumericTableWidgetItem("0", 0)
 
             for col, it in [
                 (0, sym_item), (1, name_item), (2, last_p), (3, chg_pct),
