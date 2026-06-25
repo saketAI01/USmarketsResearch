@@ -1,6 +1,6 @@
 __pycache__/
 *.pyc
-universe.db
+universe.db*
 stock_evaluate.log
 ALLAPI/
 .agents/
