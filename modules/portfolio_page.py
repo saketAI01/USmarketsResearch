@@ -185,6 +185,7 @@ class PortfolioFetchWorker(QThread):
 
 # ── Main Page ────────────────────────────────────────────────────────
 class PortfolioPage(QWidget):
+    go_explore = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -303,6 +304,7 @@ class PortfolioPage(QWidget):
         # Recalculate P&L whenever QTY or Cost is edited
         self.table.itemChanged.connect(self._on_item_changed)
         self.table.itemSelectionChanged.connect(self._on_row_selected)
+        self.table.doubleClicked.connect(self._on_double_clicked)
 
         # ── Summary cards row ────────────────────────────────────────
         cards_bar = QFrame()
@@ -682,4 +684,12 @@ class PortfolioPage(QWidget):
         pcol = SUCCESS if pnl_val >= 0 else DANGER
         self.det_pnl.setStyleSheet(
             f"color:{pcol}; font-size:11px; font-weight:bold; border:none;")
+
+    def _on_double_clicked(self, idx):
+        if idx.column() == COL_SYM:
+            it = self.table.item(idx.row(), COL_SYM)
+            if it:
+                symbol = it.text().strip().upper()
+                if symbol:
+                    self.go_explore.emit(symbol)
         self.det_hint.setVisible(False)

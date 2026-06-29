@@ -90,7 +90,7 @@ if exist USStockMaster.csv (
 :: Launch
 echo [4/4] Launching USmarketsResearch...
 echo.
-python main.py
+python -B main.py
 if %errorlevel% neq 0 (
     echo.
     echo [ERROR] Application exited with code %errorlevel%.

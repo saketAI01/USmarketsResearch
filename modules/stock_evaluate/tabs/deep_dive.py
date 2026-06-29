@@ -134,6 +134,7 @@ class DeepDiveTab(QWidget):
         self.btn_analyze.setFixedWidth(120)
         self.btn_analyze.setFont(QFont("Segoe UI", 10, QFont.Bold))
         self.sym_input.returnPressed.connect(self.btn_analyze.click)
+        self.period_combo.currentIndexChanged.connect(self.btn_analyze.click)
         toolbar.addWidget(self.btn_analyze)
 
         self.btn_watchlist = QPushButton("+ Watchlist")
@@ -452,6 +453,36 @@ class DeepDiveTab(QWidget):
                 spine.set_color(BORDER)
             a.grid(True, alpha=0.08, color='white')
 
+        full_close = df["close"].astype(float)
+        sma20 = full_close.rolling(window=20).mean() if len(full_close) >= 20 else None
+        sma50 = full_close.rolling(window=50).mean() if len(full_close) >= 50 else None
+        sma200 = full_close.rolling(window=200).mean() if len(full_close) >= 200 else None
+
+        rsi = None
+        if ax_rsi is not None:
+            full_delta = full_close.diff()
+            full_gain = full_delta.where(full_delta > 0, 0.0)
+            full_loss = (-full_delta).where(full_delta < 0, 0.0)
+            full_avg_gain = full_gain.ewm(com=13, adjust=False).mean()
+            full_avg_loss = full_loss.ewm(com=13, adjust=False).mean()
+            full_rs = full_avg_gain / full_avg_loss.replace(0, np.nan)
+            rsi = 100 - (100 / (1 + full_rs))
+
+        std20 = None
+        if self.chk_bb.isChecked() and len(full_close) >= 20:
+            std20 = full_close.rolling(window=20).std()
+
+        period = self.get_period_days()
+        if len(df) > period:
+            # We approximate trading days vs calendar days by taking period (or slightly fewer).
+            # To be precise, 1 Month (30 days) is ~21 trading days, but tail(period) is fine.
+            df = df.tail(period).copy()
+            if sma20 is not None: sma20 = sma20.tail(period)
+            if sma50 is not None: sma50 = sma50.tail(period)
+            if sma200 is not None: sma200 = sma200.tail(period)
+            if rsi is not None: rsi = rsi.tail(period)
+            if std20 is not None: std20 = std20.tail(period)
+
         dates = df["date"]
         close = df["close"].astype(float)
 
@@ -469,18 +500,13 @@ class DeepDiveTab(QWidget):
             ax.plot(dates, close, color=ACCENT, linewidth=1.5, label="Close")
 
         # Overlays
-        if self.chk_sma20.isChecked() and len(close) >= 20:
-            sma20 = close.rolling(window=20).mean()
+        if self.chk_sma20.isChecked() and sma20 is not None:
             ax.plot(dates, sma20, color="#F0883E", linewidth=1, alpha=0.8, label="SMA20")
-        if self.chk_sma50.isChecked() and len(close) >= 50:
-            sma50 = close.rolling(window=50).mean()
+        if self.chk_sma50.isChecked() and sma50 is not None:
             ax.plot(dates, sma50, color="#A371F7", linewidth=1, alpha=0.8, label="SMA50")
-        if self.chk_sma200.isChecked() and len(close) >= 200:
-            sma200 = close.rolling(window=200).mean()
+        if self.chk_sma200.isChecked() and sma200 is not None:
             ax.plot(dates, sma200, color="#D29922", linewidth=1.2, alpha=0.8, label="SMA200")
-        if self.chk_bb.isChecked() and len(close) >= 20:
-            sma20 = close.rolling(window=20).mean()
-            std20 = close.rolling(window=20).std(ddof=0)
+        if self.chk_bb.isChecked() and sma20 is not None and std20 is not None:
             bb_lower = sma20 - 2 * std20
             bb_upper = sma20 + 2 * std20
             ax.fill_between(dates, bb_lower, bb_upper, alpha=0.06, color=ACCENT)
@@ -503,15 +529,7 @@ class DeepDiveTab(QWidget):
             ax.tick_params(labelbottom=False)
 
         # RSI
-        if ax_rsi is not None:
-            delta = close.diff()
-            gain = delta.where(delta > 0, 0.0)
-            loss = (-delta).where(delta < 0, 0.0)
-            avg_gain = gain.ewm(com=13, adjust=False).mean()
-            avg_loss = loss.ewm(com=13, adjust=False).mean()
-            rs = avg_gain / avg_loss.replace(0, np.nan)
-            rsi = 100 - (100 / (1 + rs))
-            
+        if ax_rsi is not None and rsi is not None:
             ax_rsi.plot(dates, rsi, color=ACCENT2, linewidth=1)
             ax_rsi.axhline(70, color=DANGER, linestyle='--', alpha=0.3, linewidth=0.8)
             ax_rsi.axhline(50, color=TEXT_SECONDARY, linestyle='--', alpha=0.2, linewidth=0.8)

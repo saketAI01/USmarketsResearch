@@ -1006,7 +1006,6 @@ class StockComparator(QWidget):
                 border: 1px solid {BORDER};
                 gridline-color: {BORDER};
                 background: {BG_SURFACE};
-                color: {TEXT_PRIMARY};
             }}
             QTableWidget::item {{
                 padding: 6px;
@@ -1847,6 +1846,7 @@ class StockComparator(QWidget):
 class CentralWatchlistWidget(QWidget):
     watchlist_changed = Signal()  # Emit this whenever watchlists are modified
     symbols_changed = Signal(list)  # Emit this whenever symbols list is updated
+    go_explore = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -1953,6 +1953,7 @@ class CentralWatchlistWidget(QWidget):
         self.wl_symbol_table.setMinimumHeight(450)
         self.wl_symbol_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.wl_symbol_table.customContextMenuRequested.connect(self._on_wl_context_menu)
+        self.wl_symbol_table.doubleClicked.connect(self._on_wl_double_clicked)
         
         layout.addWidget(self.wl_symbol_table)
 
@@ -2029,7 +2030,6 @@ class CentralWatchlistWidget(QWidget):
                 border: 1px solid {BORDER};
                 gridline-color: {BORDER};
                 background: {BG_SURFACE};
-                color: {TEXT_PRIMARY};
                 font-size: 13px;
             }}
             QTableWidget::item {{
@@ -2612,6 +2612,22 @@ class CentralWatchlistWidget(QWidget):
         act_port = menu.addAction("💼 Copy to Portfolio")
         act_port.triggered.connect(lambda: self._copy_to_portfolio(symbols))
 
+        # --- External Charts (if single symbol selected) ---
+        if len(symbols) == 1:
+            menu.addSeparator()
+            symbol = symbols[0]
+            from PySide6.QtGui import QDesktopServices
+            from PySide6.QtCore import QUrl
+            
+            tv_act = menu.addAction(f"📈 Open {symbol} Chart in TradingView")
+            tv_act.triggered.connect(lambda: QDesktopServices.openUrl(QUrl(f"https://www.tradingview.com/chart/?symbol={symbol}")))
+            
+            yf_act = menu.addAction(f"📊 Open {symbol} Chart in Yahoo Finance")
+            yf_act.triggered.connect(lambda: QDesktopServices.openUrl(QUrl(f"https://finance.yahoo.com/chart/{symbol}")))
+            
+            fv_act = menu.addAction(f"🔍 Open {symbol} Chart in Finviz")
+            fv_act.triggered.connect(lambda: QDesktopServices.openUrl(QUrl(f"https://finviz.com/quote.ashx?t={symbol}")))
+
         menu.exec(self.wl_symbol_table.viewport().mapToGlobal(pos))
 
     def _copy_to_new_wl(self, symbols):
@@ -2653,3 +2669,11 @@ class CentralWatchlistWidget(QWidget):
         self.refresh_watchlists()
         QMessageBox.information(self, "Success",
             f"Added {added} symbol(s) to Portfolio ({len(merged)} total).")
+
+    def _on_wl_double_clicked(self, idx):
+        # Column 1 is "Symbol" in wl_symbol_table
+        it = self.wl_symbol_table.item(idx.row(), 1)
+        if it:
+            symbol = it.text().strip().upper()
+            if symbol and symbol != "N/A":
+                self.go_explore.emit(symbol)

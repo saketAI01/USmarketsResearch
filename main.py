@@ -16,6 +16,7 @@ from modules.stock_evaluate import StockEvaluateWidget
 from modules.stock_comparator import CentralWatchlistWidget
 from modules.portfolio_page import PortfolioPage
 from modules.livestream_page import LiveFeedPage
+from modules.dashboard_page import DashboardPage
 
 
 # ── colour palette ──────────────────────────────────────────────────
@@ -190,7 +191,9 @@ class MainWindow(QMainWindow):
 
         self._pages = {}
         for name in ("Dashboard", "Stock Sense", "Screener", "Watchlist", "Live Feed", "Backtest", "Portfolio", "Settings"):
-            if name == "Screener":
+            if name == "Dashboard":
+                page = DashboardPage()
+            elif name == "Screener":
                 page = ScreenerPage()
             elif name == "Stock Sense":
                 evaluate_widget = StockEvaluateWidget()
@@ -227,10 +230,22 @@ class MainWindow(QMainWindow):
                 central_wl_page.watchlist_changed.connect(stock_eval.handle_external_watchlist_change)
                 central_wl_page.watchlist_changed.connect(stock_comp.refresh_watchlists)
 
-        # Wire Live Feed go_explore to evaluate stock in Stock Sense tab
+        # Wire go_explore signals to evaluate stock in Stock Sense tab
+        dashboard_page = self._pages.get("Dashboard")
+        if dashboard_page:
+            dashboard_page.go_explore.connect(self._open_stock_sense)
+
         live_feed_page = self._pages.get("Live Feed")
         if live_feed_page:
             live_feed_page.go_explore.connect(self._open_stock_sense)
+            
+        watchlist_page = self._pages.get("Watchlist")
+        if watchlist_page:
+            watchlist_page.go_explore.connect(self._open_stock_sense)
+            
+        portfolio_page = self._pages.get("Portfolio")
+        if portfolio_page:
+            portfolio_page.go_explore.connect(self._open_stock_sense)
 
         # ── wire sidebar nav ────────────────────────────────────────
         self._nav_map = {btn: name for name, btn in self.sidebar.nav_buttons.items()}
@@ -289,6 +304,27 @@ QWidget {{
     color: {WHITE};
     font-family: "Segoe UI", "Roboto", sans-serif;
     font-size: 12px;
+}}
+
+/* ── completer dropdown popup ───────────────────── */
+QListView {{
+    background-color: #162240;
+    color: #E2E8F0;
+    border: 1px solid #1E3050;
+    selection-background-color: #00D4FF;
+    selection-color: #ffffff;
+}}
+QListView::item {{
+    color: #E2E8F0;
+    padding: 4px 8px;
+}}
+QListView::item:selected {{
+    background-color: #00D4FF;
+    color: #ffffff;
+}}
+QListView::item:hover {{
+    background-color: #1B253F;
+    color: #E2E8F0;
 }}
 
 /* ── top bar ─────────────────────────────────────── */

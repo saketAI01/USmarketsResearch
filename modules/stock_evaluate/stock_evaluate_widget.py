@@ -26,7 +26,7 @@ from .tabs.screener import ScreenerTab
 from .tabs.deep_dive import DeepDiveTab
 from .tabs.ai_insights import AIInsightsTab
 from .tabs.watchlist import WatchlistTab
-from .theme import BG_PRIMARY, TEXT_PRIMARY, ACCENT, ACCENT2, BORDER, BG_SURFACE, TEXT_SECONDARY
+from .theme import BG_PRIMARY, TEXT_PRIMARY, ACCENT, ACCENT2, BORDER, BG_SURFACE, TEXT_SECONDARY, BG_CARD
 from .logger import get_logger
 
 log = get_logger("StockEvaluate")
@@ -76,6 +76,13 @@ class StockEvaluateWidget(QWidget):
         self.completer.setFilterMode(Qt.MatchContains)
         self.completer.setMaxVisibleItems(10)
 
+        from PySide6.QtWidgets import QListView
+        popup = QListView()
+        popup.setStyleSheet(f"QListView {{ background-color: {BG_CARD}; color: {TEXT_PRIMARY}; border: 1px solid {BORDER}; }} QListView::item {{ color: {TEXT_PRIMARY}; padding: 4px; }} QListView::item:selected {{ background-color: {ACCENT}; color: #ffffff; }}")
+        self.completer.setPopup(popup)
+
+        self.completer.activated[str].connect(self._on_completer_activated)
+
         if hasattr(self.deep_dive_tab, "sym_input"):
             self.deep_dive_tab.sym_input.setCompleter(self.completer)
         if hasattr(self.ai_tab, "sym_input"):
@@ -88,6 +95,16 @@ class StockEvaluateWidget(QWidget):
                 tab.set_master_data(self.master_data)
 
         QTimer.singleShot(500, self._on_startup)
+
+    @Slot(str)
+    def _on_completer_activated(self, text):
+        idx = self.tabs.currentIndex()
+        if idx == 2:
+            self.deep_dive_tab.sym_input.setText(text)
+            self._run_deep_dive()
+        elif idx == 3:
+            self.ai_tab.sym_input.setText(text)
+            self._run_ai_analysis()
 
     def _build_ui(self):
         self.setStyleSheet(f"""
@@ -336,7 +353,9 @@ class StockEvaluateWidget(QWidget):
         self.deep_dive_tab.clear_data()
         self.deep_dive_tab.btn_analyze.setEnabled(False)
         self.deep_dive_tab.status_lbl.setText(f"Analyzing {symbol}...")
-        worker = DeepDiveWorker(symbol, self.keys, self.db)
+        # Always fetch at least 365 days to ensure SMA200 can be computed
+        fetch_days = max(365, self.deep_dive_tab.get_period_days())
+        worker = DeepDiveWorker(symbol, self.keys, self.db, fetch_days)
         worker.progress.connect(self.deep_dive_tab.status_lbl.setText)
         worker.data_ready.connect(self._on_deep_dive_data)
         worker.finished.connect(self._on_deep_dive_done)

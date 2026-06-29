@@ -577,13 +577,18 @@ class LiveFeedPage(QWidget):
         self._tbl.setSortingEnabled(True)
         self._tbl.sortByColumn(0, Qt.AscendingOrder)
         self._tbl.doubleClicked.connect(self._dbl_click)
+        self._tbl.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._tbl.customContextMenuRequested.connect(self._show_context_menu)
         self._tbl.setStyleSheet(f"""
             QTableWidget {{
                 background-color: {C['card']};
                 gridline-color: {C['border']};
                 border: 1px solid {C['border']};
                 border-radius: 6px;
-                color: {C['text']};
+            }}
+            QTableWidget::item:selected {{
+                background-color: #5F258F;
+                color: #ffffff;
             }}
             QHeaderView::section {{
                 background-color: {C['card']};
@@ -991,10 +996,62 @@ class LiveFeedPage(QWidget):
         self._tbl.setSortingEnabled(sorting)
 
     def _flash_item(self, item, color):
-        item.setBackground(color)
-        QTimer.singleShot(250, lambda: item.setBackground(QColor(Qt.transparent)))
+        try:
+            item.setBackground(color)
+        except RuntimeError:
+            return
+
+        def safe_reset():
+            try:
+                item.setBackground(QColor(Qt.transparent))
+            except RuntimeError:
+                pass
+
+        QTimer.singleShot(250, safe_reset)
 
     def _dbl_click(self, idx):
         it = self._tbl.item(idx.row(), 0)
         if it:
             self.go_explore.emit(it.text())
+
+    def _show_context_menu(self, pos):
+        idx = self._tbl.indexAt(pos)
+        if not idx.isValid():
+            return
+        row = idx.row()
+        sym_item = self._tbl.item(row, 0)
+        if not sym_item:
+            return
+        symbol = sym_item.text().strip().upper()
+        if not symbol or symbol == "—":
+            return
+
+        from PySide6.QtGui import QAction, QDesktopServices
+        from PySide6.QtCore import QUrl
+        from PySide6.QtWidgets import QMenu
+
+        menu = QMenu(self)
+        menu.setStyleSheet(f"""
+            QMenu {{
+                background-color: {C['card']};
+                color: {C['text']};
+                border: 1px solid {C['border']};
+            }}
+            QMenu::item:selected {{
+                background-color: {C['hover']};
+            }}
+        """)
+
+        tv_act = QAction(f"Open {symbol} Chart in TradingView", self)
+        yf_act = QAction(f"Open {symbol} Chart in Yahoo Finance", self)
+        fv_act = QAction(f"Open {symbol} Chart in Finviz", self)
+
+        tv_act.triggered.connect(lambda: QDesktopServices.openUrl(QUrl(f"https://www.tradingview.com/chart/?symbol={symbol}")))
+        yf_act.triggered.connect(lambda: QDesktopServices.openUrl(QUrl(f"https://finance.yahoo.com/chart/{symbol}")))
+        fv_act.triggered.connect(lambda: QDesktopServices.openUrl(QUrl(f"https://finviz.com/quote.ashx?t={symbol}")))
+
+        menu.addAction(tv_act)
+        menu.addAction(yf_act)
+        menu.addAction(fv_act)
+
+        menu.exec(self._tbl.mapToGlobal(pos))
