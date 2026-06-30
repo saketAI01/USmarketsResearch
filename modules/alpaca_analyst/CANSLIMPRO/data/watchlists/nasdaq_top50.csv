@@ -1,0 +1,51 @@
+Ticker,Name,Sector
+AAPL,Apple Inc,Technology
+MSFT,Microsoft Corp,Technology
+NVDA,NVIDIA Corp,Technology
+AMZN,Amazon.com Inc,Consumer Discretionary
+META,Meta Platforms,Technology
+GOOGL,Alphabet Class A,Technology
+AVGO,Broadcom Inc,Technology
+TSLA,Tesla Inc,Consumer Discretionary
+COST,Costco Wholesale,Consumer Staples
+NFLX,Netflix Inc,Communication Services
+AMD,Advanced Micro Devices,Technology
+ADBE,Adobe Inc,Technology
+CSCO,Cisco Systems,Technology
+QCOM,Qualcomm Inc,Technology
+INTU,Intuit Inc,Technology
+AMGN,Amgen Inc,Healthcare
+ISRG,Intuitive Surgical,Healthcare
+AMAT,Applied Materials,Technology
+MU,Micron Technology,Technology
+LRCX,Lam Research,Technology
+KLAC,KLA Corp,Technology
+CDNS,Cadence Design Systems,Technology
+SNPS,Synopsys Inc,Technology
+PANW,Palo Alto Networks,Technology
+CRWD,CrowdStrike Holdings,Technology
+MRVL,Marvell Technology,Technology
+FTNT,Fortinet Inc,Technology
+DDOG,Datadog Inc,Technology
+ZS,Zscaler Inc,Technology
+TEAM,Atlassian Corp,Technology
+SMCI,Super Micro Computer,Technology
+PCAR,PACCAR Inc,Industrials
+MCHP,Microchip Technology,Technology
+NXPI,NXP Semiconductors,Technology
+ODFL,Old Dominion Freight,Industrials
+FAST,Fastenal Co,Industrials
+VRSK,Verisk Analytics,Industrials
+IDXX,IDEXX Laboratories,Healthcare
+PLTR,Palantir Technologies,Technology
+MSTR,MicroStrategy,Technology
+TTD,Trade Desk,Technology
+AXON,Axon Enterprise,Technology
+CELH,Celsius Holdings,Consumer Staples
+SMAR,Smartsheet Inc,Technology
+OKTA,Okta Inc,Technology
+NET,Cloudflare Inc,Technology
+SNOW,Snowflake Inc,Technology
+COIN,Coinbase Global,Financials
+RBLX,Roblox Corp,Technology
+HOOD,Robinhood Markets,Financials

@@ -1,0 +1,51 @@
+Ticker,Name,Sector
+AAPL,Apple Inc,Technology
+MSFT,Microsoft Corp,Technology
+NVDA,NVIDIA Corp,Technology
+AMZN,Amazon.com Inc,Consumer Discretionary
+META,Meta Platforms,Technology
+GOOGL,Alphabet Class A,Technology
+AVGO,Broadcom Inc,Technology
+BRK-B,Berkshire Hathaway B,Financials
+LLY,Eli Lilly,Healthcare
+JPM,JPMorgan Chase,Financials
+TSLA,Tesla Inc,Consumer Discretionary
+UNH,UnitedHealth Group,Healthcare
+V,Visa Inc,Financials
+XOM,Exxon Mobil,Energy
+MA,Mastercard Inc,Financials
+JNJ,Johnson & Johnson,Healthcare
+COST,Costco Wholesale,Consumer Staples
+HD,Home Depot,Consumer Discretionary
+PG,Procter & Gamble,Consumer Staples
+ORCL,Oracle Corp,Technology
+MRK,Merck & Co,Healthcare
+ABBV,AbbVie Inc,Healthcare
+CRM,Salesforce Inc,Technology
+CVX,Chevron Corp,Energy
+BAC,Bank of America,Financials
+KO,Coca-Cola Co,Consumer Staples
+WMT,Walmart Inc,Consumer Staples
+NFLX,Netflix Inc,Communication Services
+AMD,Advanced Micro Devices,Technology
+PEP,PepsiCo Inc,Consumer Staples
+TMO,Thermo Fisher Scientific,Healthcare
+ADBE,Adobe Inc,Technology
+MCD,McDonald's Corp,Consumer Discretionary
+PM,Philip Morris,Consumer Staples
+CSCO,Cisco Systems,Technology
+ACN,Accenture plc,Technology
+QCOM,Qualcomm Inc,Technology
+GE,GE Aerospace,Industrials
+IBM,IBM Corp,Technology
+INTU,Intuit Inc,Technology
+AMGN,Amgen Inc,Healthcare
+CAT,Caterpillar Inc,Industrials
+GS,Goldman Sachs,Financials
+AXP,American Express,Financials
+ISRG,Intuitive Surgical,Healthcare
+NOW,ServiceNow Inc,Technology
+AMAT,Applied Materials,Technology
+PANW,Palo Alto Networks,Technology
+CRWD,CrowdStrike Holdings,Technology
+PLTR,Palantir Technologies,Technology

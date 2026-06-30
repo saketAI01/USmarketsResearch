@@ -46,7 +46,7 @@ class Sidebar(QFrame):
         self.content_layout.setSpacing(8)
 
         self.nav_buttons = {}
-        for title in ("Dashboard", "Stock Sense", "Screener", "Watchlist", "Live Feed", "Backtest", "Portfolio", "Settings"):
+        for title in ("Dashboard", "Stock Sense", "Screener", "Watchlist", "Analyst", "Live Feed", "Backtest", "Portfolio", "Settings"):
             btn = QPushButton(title)
             btn.setObjectName("sidebarBtn")
             btn.setCursor(Qt.PointingHandCursor)
@@ -190,7 +190,7 @@ class MainWindow(QMainWindow):
         self.content_pane.setObjectName("contentPane")
 
         self._pages = {}
-        for name in ("Dashboard", "Stock Sense", "Screener", "Watchlist", "Live Feed", "Backtest", "Portfolio", "Settings"):
+        for name in ("Dashboard", "Stock Sense", "Screener", "Watchlist", "Analyst", "Live Feed", "Backtest", "Portfolio", "Settings"):
             if name == "Dashboard":
                 page = DashboardPage()
             elif name == "Screener":
@@ -200,6 +200,9 @@ class MainWindow(QMainWindow):
                 page = StockSensePage(evaluate_widget)
             elif name == "Watchlist":
                 page = CentralWatchlistWidget()
+            elif name == "Analyst":
+                from modules.alpaca_analyst.analyst_tab import AnalystPanel
+                page = AnalystPanel(QThreadPool.globalInstance())
             elif name == "Live Feed":
                 watchlist_page = self._pages.get("Watchlist")
                 page = LiveFeedPage(watchlist_page)
@@ -219,6 +222,7 @@ class MainWindow(QMainWindow):
         screener_page = self._pages.get("Screener")
         stock_sense_page = self._pages.get("Stock Sense")
         central_wl_page = self._pages.get("Watchlist")
+        analyst_page = self._pages.get("Analyst")
         if screener_page and stock_sense_page and central_wl_page:
             stock_comp = screener_page._subtab_widgets.get("Stocks Compare")
             stock_eval = stock_sense_page._stock_evaluate_widget
@@ -226,31 +230,47 @@ class MainWindow(QMainWindow):
             stock_adviser = getattr(stock_sense_page, "stock_adviser_widget", None)
             
             if stock_comp and stock_eval:
-                # When stock_eval changes watchlists -> refresh central_wl and stock_comp
+                # When stock_eval changes watchlists -> refresh central_wl, stock_comp, stock_adviser, analyst
                 stock_eval.watchlist_changed.connect(central_wl_page.refresh_watchlists)
                 stock_eval.watchlist_changed.connect(stock_comp.refresh_watchlists)
                 if stock_adviser:
                     stock_eval.watchlist_changed.connect(stock_adviser.handle_external_watchlist_change)
+                if analyst_page:
+                    stock_eval.watchlist_changed.connect(analyst_page.refresh_watchlists_combo)
                 
-                # When central_wl changes watchlists -> refresh stock_eval and stock_comp
+                # When central_wl changes watchlists -> refresh stock_eval, stock_comp, stock_adviser, analyst
                 central_wl_page.watchlist_changed.connect(stock_eval.handle_external_watchlist_change)
                 central_wl_page.watchlist_changed.connect(stock_comp.refresh_watchlists)
                 if stock_adviser:
                     central_wl_page.watchlist_changed.connect(stock_adviser.handle_external_watchlist_change)
+                if analyst_page:
+                    central_wl_page.watchlist_changed.connect(analyst_page.refresh_watchlists_combo)
             
             if finviz_screener and stock_eval:
-                # When finviz_screener changes watchlists -> refresh central_wl, stock_comp, and stock_eval
+                # When finviz_screener changes watchlists -> refresh central_wl, stock_comp, stock_eval, stock_adviser, analyst
                 finviz_screener.watchlist_changed.connect(central_wl_page.refresh_watchlists)
                 finviz_screener.watchlist_changed.connect(stock_comp.refresh_watchlists)
                 finviz_screener.watchlist_changed.connect(stock_eval.handle_external_watchlist_change)
                 if stock_adviser:
                     finviz_screener.watchlist_changed.connect(stock_adviser.handle_external_watchlist_change)
+                if analyst_page:
+                    finviz_screener.watchlist_changed.connect(analyst_page.refresh_watchlists_combo)
                     
             if stock_adviser:
-                # When stock_adviser changes watchlists -> refresh central_wl, stock_comp, and stock_eval
+                # When stock_adviser changes watchlists -> refresh central_wl, stock_comp, stock_eval, analyst
                 stock_adviser.watchlist_changed.connect(central_wl_page.refresh_watchlists)
                 stock_adviser.watchlist_changed.connect(stock_comp.refresh_watchlists)
                 stock_adviser.watchlist_changed.connect(stock_eval.handle_external_watchlist_change)
+                if analyst_page:
+                    stock_adviser.watchlist_changed.connect(analyst_page.refresh_watchlists_combo)
+
+            if analyst_page:
+                # When analyst changes watchlists -> refresh central_wl, stock_comp, stock_eval, stock_adviser
+                analyst_page.watchlist_changed.connect(central_wl_page.refresh_watchlists)
+                analyst_page.watchlist_changed.connect(stock_comp.refresh_watchlists)
+                analyst_page.watchlist_changed.connect(stock_eval.handle_external_watchlist_change)
+                if stock_adviser:
+                    analyst_page.watchlist_changed.connect(stock_adviser.handle_external_watchlist_change)
 
         # Wire go_explore signals to evaluate stock in Stock Sense tab
         dashboard_page = self._pages.get("Dashboard")

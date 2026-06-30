@@ -1,0 +1,32 @@
+{
+  "credentials": {
+    "alpaca_key": "",
+    "alpaca_secret": "",
+    "fmp_key": "",
+    "gemini_key": "",
+    "perplexity_key": ""
+  },
+  "data_source": "auto",
+  "default_interval": "Weekly",
+  "default_period": "2 Years",
+  "show_ma": true,
+  "show_volume": true,
+  "show_sr": true,
+  "show_bb": false,
+  "ai_enabled": true,
+  "use_perplexity": true,
+  "reports_dir": "",
+  "auto_save_md": true,
+  "watchlists": {
+    "My Watchlist": [
+      "AAPL",
+      "MSFT",
+      "NVDA",
+      "TSLA",
+      "SPY",
+      "AMD",
+      "VIAV"
+    ]
+  },
+  "active_watchlist": "My Watchlist"
+}

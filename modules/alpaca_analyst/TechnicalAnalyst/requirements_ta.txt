@@ -1,0 +1,14 @@
+# Technical Analyst Pro - Requirements
+# Install with: pip install -r requirements_ta.txt --break-system-packages
+
+PySide6>=6.6.0
+matplotlib>=3.8.0
+numpy>=1.26.0
+pandas>=2.1.0
+yfinance>=0.2.36
+requests>=2.31.0
+mplfinance>=0.12.10b0
+alpaca-py>=0.20.0
+google-generativeai>=0.7.0
+reportlab>=4.0.0
+Pillow>=10.0.0
