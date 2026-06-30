@@ -4,8 +4,10 @@ from PySide6.QtCore import QThread, Signal, Slot, Qt
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QTableWidget,
     QTableWidgetItem, QHeaderView, QLabel, QComboBox, QLineEdit,
-    QFileDialog, QFrame, QGridLayout, QProgressBar
+    QFileDialog, QFrame, QGridLayout, QProgressBar, QMenu, QInputDialog,
+    QMessageBox
 )
+from modules.stock_evaluate.database import DatabaseManager
 
 
 # ── Filter mapping (8x5 grid) ────────────────────────────────────
@@ -63,7 +65,7 @@ FILTER_MAPPING = {
 
     "Index": {
         "col": 1, "category": "Descriptive",
-        "options": {"Any": (None, None), "S&P 500": ("S&P 500", "idx_sp500"), "NASDAQ 100": ("Nasdaq 100", "idx_ndx"), "DJIA": ("DJIA", "idx_dji"), "Russell 2000": ("Russell 2000", "idx_rut")}
+        "options": {"Any": (None, None), "S&P 500": ("S&P 500", "idx_sp500"), "NASDAQ 100": ("NASDAQ 100", "idx_ndx"), "DJIA": ("DJIA", "idx_dji"), "Russell 2000": ("RUSSELL 2000", "idx_rut")}
     },
     "P/E": {
         "col": 1, "category": "Fundamental",
@@ -336,6 +338,8 @@ class NumericTableWidgetItem(QTableWidgetItem):
 
 # ── Ported Finviz Screener Widget ─────────────────────────────────
 class FinvizScreenerWidget(QWidget):
+    watchlist_changed = Signal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setObjectName("finvizScreener")
@@ -345,6 +349,7 @@ class FinvizScreenerWidget(QWidget):
         self.builder_combos = {}
         self.builder_labels = {}
         self.current_active_tab = "All"
+        self.db = DatabaseManager()
 
         self._build_ui()
 
@@ -476,6 +481,9 @@ class FinvizScreenerWidget(QWidget):
         self.table.setObjectName("fsTable")
         self.table.setAlternatingRowColors(True)
         self.table.setSortingEnabled(True)
+        self.table.setSelectionBehavior(QTableWidget.SelectRows)
+        self.table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.table.customContextMenuRequested.connect(self.show_context_menu)
         layout.addWidget(self.table, 1)
 
         # ── status bar ──────────────────────────────────────────────
@@ -495,6 +503,19 @@ class FinvizScreenerWidget(QWidget):
         self.export_btn.setEnabled(False)
         self.export_btn.clicked.connect(self.export_to_csv)
         sb.addWidget(self.export_btn)
+
+        # Watchlist saving controls
+        self.wl_name_input = QLineEdit()
+        self.wl_name_input.setPlaceholderText("New Watchlist Name")
+        self.wl_name_input.setMaximumWidth(180)
+        self.wl_name_input.setEnabled(False)
+        sb.addWidget(self.wl_name_input)
+
+        self.save_wl_btn = QPushButton("Save Watchlist")
+        self.save_wl_btn.setObjectName("saveWlBtn")
+        self.save_wl_btn.setEnabled(False)
+        self.save_wl_btn.clicked.connect(self.save_as_watchlist)
+        sb.addWidget(self.save_wl_btn)
 
         self.status_label = QLabel("Engine initialization successful. System operational.")
         sb.addWidget(self.status_label, 1)
@@ -618,6 +639,8 @@ class FinvizScreenerWidget(QWidget):
         self.run_btn.setEnabled(False)
         self.reset_btn.setEnabled(False)
         self.export_btn.setEnabled(False)
+        self.wl_name_input.setEnabled(False)
+        self.save_wl_btn.setEnabled(False)
         self.search_bar.clear()
         self.table.setRowCount(0)
 
@@ -674,6 +697,10 @@ class FinvizScreenerWidget(QWidget):
 
         self.raw_df = df
         self.export_btn.setEnabled(True)
+        self.wl_name_input.setEnabled(True)
+        from datetime import datetime
+        self.wl_name_input.setText(f"Finviz Screen {datetime.now().strftime('%d %b %H:%M')}")
+        self.save_wl_btn.setEnabled(True)
         self.score_label.setText(f"Scanned: {len(df.index)}")
         self.status_label.setText(f"Loaded {len(df.index)} assets successfully via [{lib}].")
         self._populate_table(df)
@@ -682,6 +709,8 @@ class FinvizScreenerWidget(QWidget):
     def on_screener_failure(self, msg):
         self.score_label.setText("Error")
         self.status_label.setText(msg)
+        self.wl_name_input.setEnabled(False)
+        self.save_wl_btn.setEnabled(False)
 
     def _populate_table(self, target_df):
         self.table.setSortingEnabled(False)
@@ -720,3 +749,118 @@ class FinvizScreenerWidget(QWidget):
                 self.status_label.setText(f"Data saved to: {path}")
             except Exception as e:
                 self.status_label.setText(f"Export Error: {str(e)}")
+
+    def save_as_watchlist(self):
+        if self.raw_df.empty:
+            return
+        name = self.wl_name_input.text().strip()
+        if not name:
+            QMessageBox.warning(self, "Validation Error", "Please enter a watchlist name.")
+            return
+
+        # Find the ticker/symbol column
+        ticker_col = None
+        for col in self.raw_df.columns:
+            if col.lower() in ('ticker', 'symbol'):
+                ticker_col = col
+                break
+        
+        if not ticker_col:
+            QMessageBox.warning(self, "Error", "Could not find Ticker/Symbol column in the results.")
+            return
+
+        symbols = self.raw_df[ticker_col].dropna().unique().tolist()
+        symbols = [str(s).strip().upper() for s in symbols if str(s).strip()]
+
+        if not symbols:
+            QMessageBox.warning(self, "Empty List", "No valid symbols found to save.")
+            return
+
+        # DatabaseManager.create_watchlist automatically prepends "US_" if not present
+        if not name.startswith("US_"):
+            wl_name = "US_" + name
+        else:
+            wl_name = name
+
+        try:
+            self.db.create_watchlist(wl_name)
+            for sym in symbols:
+                self.db.add_to_watchlist(wl_name, sym)
+            
+            self.status_label.setText(f"Saved {len(symbols)} symbols to watchlist '{wl_name}'")
+            QMessageBox.information(
+                self, "Watchlist Saved",
+                f"Successfully created watchlist '{wl_name}' with {len(symbols)} symbols."
+            )
+            self.watchlist_changed.emit()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to save watchlist: {str(e)}")
+
+    def show_context_menu(self, pos):
+        row = self.table.rowAt(pos.y())
+        if row < 0:
+            return
+        
+        ticker_col_idx = None
+        for col_idx in range(self.table.columnCount()):
+            header_text = self.table.horizontalHeaderItem(col_idx).text().lower()
+            if header_text in ('ticker', 'symbol'):
+                ticker_col_idx = col_idx
+                break
+        
+        if ticker_col_idx is None:
+            return
+            
+        ticker_item = self.table.item(row, ticker_col_idx)
+        if not ticker_item:
+            return
+            
+        symbol = ticker_item.text().strip().upper()
+        if not symbol:
+            return
+
+        menu = QMenu(self)
+        add_submenu = menu.addMenu(f"Add {symbol} to Watchlist")
+        
+        try:
+            watchlists = self.db.get_watchlists()
+        except Exception:
+            watchlists = []
+            
+        if watchlists:
+            for wl in watchlists:
+                wl_name = wl["name"]
+                act = add_submenu.addAction(wl_name)
+                # Capture variables properly in lambda
+                act.triggered.connect(lambda checked=False, w=wl_name, s=symbol: self.add_symbol_to_watchlist(s, w))
+        else:
+            act_none = add_submenu.addAction("No watchlists found")
+            act_none.setEnabled(False)
+            
+        add_submenu.addSeparator()
+        act_new = add_submenu.addAction("New Watchlist...")
+        act_new.triggered.connect(lambda checked=False, s=symbol: self.add_symbol_to_new_watchlist(s))
+        
+        menu.exec_(self.table.viewport().mapToGlobal(pos))
+
+    def add_symbol_to_watchlist(self, symbol, wl_name):
+        try:
+            self.db.add_to_watchlist(wl_name, symbol)
+            self.status_label.setText(f"Added {symbol} to watchlist '{wl_name}'")
+            self.watchlist_changed.emit()
+        except Exception as e:
+            QMessageBox.warning(self, "Error", f"Failed to add {symbol} to watchlist: {str(e)}")
+
+    def add_symbol_to_new_watchlist(self, symbol):
+        name, ok = QInputDialog.getText(self, "New Watchlist", "Enter name for new watchlist:")
+        if ok and name.strip():
+            wl_name = name.strip()
+            if not wl_name.startswith("US_"):
+                wl_name = "US_" + wl_name
+            try:
+                self.db.create_watchlist(wl_name)
+                self.db.add_to_watchlist(wl_name, symbol)
+                self.status_label.setText(f"Created watchlist '{wl_name}' and added {symbol}")
+                self.watchlist_changed.emit()
+            except Exception as e:
+                QMessageBox.warning(self, "Error", f"Failed to create watchlist: {str(e)}")

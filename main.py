@@ -222,13 +222,35 @@ class MainWindow(QMainWindow):
         if screener_page and stock_sense_page and central_wl_page:
             stock_comp = screener_page._subtab_widgets.get("Stocks Compare")
             stock_eval = stock_sense_page._stock_evaluate_widget
+            finviz_screener = screener_page._subtab_widgets.get("Finviz Screener")
+            stock_adviser = getattr(stock_sense_page, "stock_adviser_widget", None)
+            
             if stock_comp and stock_eval:
                 # When stock_eval changes watchlists -> refresh central_wl and stock_comp
                 stock_eval.watchlist_changed.connect(central_wl_page.refresh_watchlists)
                 stock_eval.watchlist_changed.connect(stock_comp.refresh_watchlists)
+                if stock_adviser:
+                    stock_eval.watchlist_changed.connect(stock_adviser.handle_external_watchlist_change)
                 
+                # When central_wl changes watchlists -> refresh stock_eval and stock_comp
                 central_wl_page.watchlist_changed.connect(stock_eval.handle_external_watchlist_change)
                 central_wl_page.watchlist_changed.connect(stock_comp.refresh_watchlists)
+                if stock_adviser:
+                    central_wl_page.watchlist_changed.connect(stock_adviser.handle_external_watchlist_change)
+            
+            if finviz_screener and stock_eval:
+                # When finviz_screener changes watchlists -> refresh central_wl, stock_comp, and stock_eval
+                finviz_screener.watchlist_changed.connect(central_wl_page.refresh_watchlists)
+                finviz_screener.watchlist_changed.connect(stock_comp.refresh_watchlists)
+                finviz_screener.watchlist_changed.connect(stock_eval.handle_external_watchlist_change)
+                if stock_adviser:
+                    finviz_screener.watchlist_changed.connect(stock_adviser.handle_external_watchlist_change)
+                    
+            if stock_adviser:
+                # When stock_adviser changes watchlists -> refresh central_wl, stock_comp, and stock_eval
+                stock_adviser.watchlist_changed.connect(central_wl_page.refresh_watchlists)
+                stock_adviser.watchlist_changed.connect(stock_comp.refresh_watchlists)
+                stock_adviser.watchlist_changed.connect(stock_eval.handle_external_watchlist_change)
 
         # Wire go_explore signals to evaluate stock in Stock Sense tab
         dashboard_page = self._pages.get("Dashboard")
@@ -489,7 +511,7 @@ QPushButton#neonToggleBtn:hover {{
     background-color: {NEON_BLUE};
     color: {DARK_BG};
 }}
-QPushButton#exportBtn {{
+QPushButton#exportBtn, QPushButton#saveWlBtn {{
     background-color: transparent;
     color: {NEON_BLUE};
     border: 1px solid {NEON_BLUE};
@@ -497,11 +519,11 @@ QPushButton#exportBtn {{
     padding: 4px 10px;
     font-weight: bold;
 }}
-QPushButton#exportBtn:hover {{
+QPushButton#exportBtn:hover, QPushButton#saveWlBtn:hover {{
     background-color: {NEON_BLUE};
     color: {DARK_BG};
 }}
-QPushButton#exportBtn:disabled {{
+QPushButton#exportBtn:disabled, QPushButton#saveWlBtn:disabled {{
     border-color: #2A3A5A;
     color: #4A5A7A;
 }}
@@ -634,6 +656,19 @@ QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
 
 
 def main():
+    # Suppress UserWarning about missing glyphs in Matplotlib (e.g. Emoji glyphs)
+    import warnings
+    warnings.filterwarnings("ignore", message=".*Glyph.*missing from font.*")
+
+    # Suppress repeating QFont::setPointSize warnings in Qt console output
+    from PySide6.QtCore import qInstallMessageHandler, QtMsgType
+    def qt_message_handler(msg_type, context, msg):
+        if "QFont::setPointSize" in msg:
+            return
+        if msg_type in (QtMsgType.QtWarningMsg, QtMsgType.QtCriticalMsg, QtMsgType.QtFatalMsg):
+            sys.stderr.write(f"QtMsg: {msg}\n")
+    qInstallMessageHandler(qt_message_handler)
+
     app = QApplication(sys.argv)
     app.setStyleSheet(STYLE)
 

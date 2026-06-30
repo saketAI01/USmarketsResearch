@@ -4,6 +4,8 @@ from PySide6.QtWidgets import (
     QFrame, QSizePolicy
 )
 
+from modules.stock_adviser.us_stock_analyzer import StockAnalyzerApp
+
 
 class SubtabButton(QPushButton):
     def __init__(self, text, parent=None):
@@ -18,15 +20,17 @@ class StockSensePage(QWidget):
     def __init__(self, stock_evaluate_widget, parent=None):
         super().__init__(parent)
         self.setObjectName("stockSensePage")
-        self.SUBTABS = ["Stock Evaluate"]
+        self.SUBTABS = ["Stock Evaluate", "Stock Adviser"]
         self._subtab_widgets = {}
         self._subtab_buttons = {}
         self._stock_evaluate_widget = stock_evaluate_widget
+        self.stock_adviser_widget = StockAnalyzerApp()
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
 
+        # ── sub-tab bar ─────────────────────────────────────────────
         bar = QFrame()
         bar.setObjectName("subtabBar")
         bar_layout = QHBoxLayout(bar)
@@ -42,12 +46,16 @@ class StockSensePage(QWidget):
         bar_layout.addStretch()
         layout.addWidget(bar)
 
+        # ── stacked content ─────────────────────────────────────────
         self.stack = QStackedWidget()
         self.stack.setObjectName("subtabStack")
         layout.addWidget(self.stack, 1)
 
         self._subtab_widgets["Stock Evaluate"] = stock_evaluate_widget
         self.stack.addWidget(stock_evaluate_widget)
+
+        self._subtab_widgets["Stock Adviser"] = self.stock_adviser_widget
+        self.stack.addWidget(self.stock_adviser_widget)
 
         if self.SUBTABS:
             self._subtab_buttons[self.SUBTABS[0]].setChecked(True)

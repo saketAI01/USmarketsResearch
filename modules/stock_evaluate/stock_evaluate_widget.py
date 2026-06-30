@@ -104,7 +104,7 @@ class StockEvaluateWidget(QWidget):
             self._run_deep_dive()
         elif idx == 3:
             self.ai_tab.sym_input.setText(text)
-            self._run_ai_analysis()
+            self.ai_tab._on_generate()
 
     def _build_ui(self):
         self.setStyleSheet(f"""

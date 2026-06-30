@@ -1,0 +1,226 @@
+{
+  "version": 1,
+  "schema_doc": "Bundled popular indicator-based strategies, expressed in the strategy_dsl grammar. The 'Fetch from web' button in the Strategy Builder tab can refresh this file from a configurable URL.",
+  "strategies": [
+    {
+      "id": "rsi_oversold_bounce",
+      "name": "RSI Oversold Bounce",
+      "category": "Mean Reversion",
+      "source": "popular",
+      "author": "Classic technical analysis",
+      "tags": ["RSI", "mean-reversion", "short-term"],
+      "description": "Buy when RSI dips into oversold territory then crosses back above 30, with price above the 200-day MA as a trend filter. Exit when momentum gets hot or RSI rolls back over.",
+      "buy": "RSI14 CROSSOVER 30 AND LTP > SMA200",
+      "sell": "RSI14 > 70 OR RSI14 CROSSBELOW 50"
+    },
+    {
+      "id": "macd_bullish_cross",
+      "name": "MACD Bullish Cross",
+      "category": "Momentum",
+      "source": "popular",
+      "author": "Gerald Appel",
+      "tags": ["MACD", "momentum", "trend"],
+      "description": "Enter when the MACD line crosses above its signal line, confirming bullish momentum. Exit on the inverse crossover.",
+      "buy": "MACD CROSSOVER SIGNAL",
+      "sell": "MACD CROSSBELOW SIGNAL"
+    },
+    {
+      "id": "macd_above_zero",
+      "name": "MACD Above Zero Confirmation",
+      "category": "Momentum",
+      "source": "popular",
+      "author": "Gerald Appel",
+      "tags": ["MACD", "momentum", "trend"],
+      "description": "Stricter MACD entry: only buy when the MACD crosses signal AND is itself above the zero line, confirming a real trend.",
+      "buy": "MACD CROSSOVER SIGNAL AND MACD > 0",
+      "sell": "MACD CROSSBELOW SIGNAL OR MACD < 0"
+    },
+    {
+      "id": "golden_cross",
+      "name": "Golden Cross (50/200)",
+      "category": "Trend Following",
+      "source": "popular",
+      "author": "Classic Wall Street",
+      "tags": ["SMA", "trend", "long-term"],
+      "description": "Buy when the 50-day SMA crosses above the 200-day SMA. Exit on the death cross.",
+      "buy": "SMA50 CROSSOVER SMA200",
+      "sell": "SMA50 CROSSBELOW SMA200"
+    },
+    {
+      "id": "fast_ma_cross_20_50",
+      "name": "20/50 SMA Crossover",
+      "category": "Trend Following",
+      "source": "popular",
+      "author": "Classic technical analysis",
+      "tags": ["SMA", "trend", "medium-term"],
+      "description": "Faster trend follower: enter when SMA20 crosses above SMA50, exit on the inverse.",
+      "buy": "SMA20 CROSSOVER SMA50",
+      "sell": "SMA20 CROSSBELOW SMA50"
+    },
+    {
+      "id": "donchian_breakout",
+      "name": "Donchian 20-Day Breakout",
+      "category": "Breakout",
+      "source": "popular",
+      "author": "Richard Donchian / Turtle Traders",
+      "tags": ["breakout", "trend", "donchian"],
+      "description": "Buy when today's close exceeds the highest high of the previous 20 days. Exit on a fresh 20-day low.",
+      "buy": "CLOSE > HIGH20_PREV",
+      "sell": "CLOSE < LOW20_PREV"
+    },
+    {
+      "id": "volume_breakout",
+      "name": "20-Day Breakout with Volume Confirmation",
+      "category": "Breakout",
+      "source": "popular",
+      "author": "William O'Neil-inspired",
+      "tags": ["breakout", "volume", "momentum"],
+      "description": "Stricter breakout: close must exceed the prior 20-day high AND volume must be at least 1.5x the 20-day average to confirm institutional participation.",
+      "buy": "CLOSE > HIGH20_PREV AND VOLUME > 1.5 * AVG_VOLUME",
+      "sell": "CLOSE < SMA20 OR RSI14 > 80"
+    },
+    {
+      "id": "bollinger_squeeze_breakout",
+      "name": "Bollinger Squeeze Breakout",
+      "category": "Breakout",
+      "source": "popular",
+      "author": "John Bollinger",
+      "tags": ["bollinger", "breakout", "volatility"],
+      "description": "After a low-volatility squeeze (narrow bands), enter when price breaks above the upper band. Exit on a return to the middle band.",
+      "buy": "CLOSE > BB_UP AND BB_UP - BB_DN < 0.08 * BB_MID",
+      "sell": "CLOSE < BB_MID"
+    },
+    {
+      "id": "bollinger_mean_reversion",
+      "name": "Bollinger Mean Reversion",
+      "category": "Mean Reversion",
+      "source": "popular",
+      "author": "John Bollinger",
+      "tags": ["bollinger", "mean-reversion"],
+      "description": "Buy when price closes below the lower band with the trend filter of being above the 200-day MA. Exit on a return to the middle band or a stop on RSI.",
+      "buy": "CLOSE < BB_DN AND LTP > SMA200",
+      "sell": "CLOSE > BB_MID OR RSI14 < 30"
+    },
+    {
+      "id": "ema_pullback",
+      "name": "EMA20 Pullback in Uptrend",
+      "category": "Trend Following",
+      "source": "popular",
+      "author": "Trend-following community",
+      "tags": ["EMA", "pullback", "trend"],
+      "description": "In an established uptrend (price above 200 SMA and RSI bullish), buy pullbacks to the 20 EMA. Exit when extension or momentum fades.",
+      "buy": "LTP > SMA200 AND CLOSE > EMA12 * 0.99 AND CLOSE < EMA12 * 1.02 AND RSI14 > 45",
+      "sell": "RSI14 > 75 OR CLOSE < SMA50"
+    },
+    {
+      "id": "fifty_two_week_breakout",
+      "name": "52-Week High Breakout",
+      "category": "Breakout",
+      "source": "popular",
+      "author": "William O'Neil",
+      "tags": ["breakout", "momentum", "long-term"],
+      "description": "Buy a clean break of the trailing 52-week high with above-average volume. Exit on weakness vs. the 50-day MA.",
+      "buy": "CLOSE >= HIGH52W * 0.999 AND VOLUME > 1.2 * AVG_VOLUME",
+      "sell": "CLOSE < SMA50 OR RSI14 > 85"
+    },
+    {
+      "id": "rsi_momentum_continuation",
+      "name": "RSI Momentum Continuation",
+      "category": "Momentum",
+      "source": "popular",
+      "author": "Andrew Cardwell-inspired",
+      "tags": ["RSI", "momentum"],
+      "description": "In strong trends, RSI above 55 stays bullish. Enter when RSI crosses 50 and stays above; exit on a fall under 40.",
+      "buy": "RSI14 CROSSOVER 50 AND LTP > SMA50",
+      "sell": "RSI14 < 40"
+    },
+    {
+      "id": "death_cross_exit",
+      "name": "Death Cross (Sell-Only Signal)",
+      "category": "Trend Following",
+      "source": "popular",
+      "author": "Classic Wall Street",
+      "tags": ["SMA", "trend", "exit-only"],
+      "description": "Defensive: do not enter on this rule; it's a sell signal. SMA50 falling below SMA200 historically precedes deeper drawdowns.",
+      "buy": "0 = 1",
+      "sell": "SMA50 CROSSBELOW SMA200"
+    },
+    {
+      "id": "peg_value_combo",
+      "name": "PEG Value + Trend Combo",
+      "category": "Quality",
+      "source": "popular",
+      "author": "Peter Lynch (PEG) blended with trend",
+      "tags": ["fundamentals", "value", "PEG"],
+      "description": "Growth at a reasonable price: PEG below 1, price still above the 200-day MA so we're not catching a falling knife. Exit when the multiple becomes expensive or trend breaks.",
+      "buy": "PEG > 0 AND PEG < 1.0 AND LTP > SMA200",
+      "sell": "PEG > 2.5 OR LTP < SMA50"
+    },
+    {
+      "id": "roe_momentum_quality",
+      "name": "High-ROE Momentum (CANSLIM-ish)",
+      "category": "Quality + Momentum",
+      "source": "popular",
+      "author": "Inspired by William O'Neil CANSLIM",
+      "tags": ["fundamentals", "ROE", "momentum"],
+      "description": "Quality + momentum: high ROE, strong recent return, price above 50 SMA. Exit on RSI exhaustion or break of the 50-day MA.",
+      "buy": "ROE > 15 AND %CHG_20D > 5 AND LTP > SMA50",
+      "sell": "RSI14 > 80 OR LTP < SMA50"
+    },
+    {
+      "id": "low_volatility_premium_long",
+      "name": "Above 200 SMA + RSI Pullback",
+      "category": "Mean Reversion",
+      "source": "popular",
+      "author": "Larry Connors-inspired",
+      "tags": ["RSI", "pullback", "trend"],
+      "description": "In an uptrend (above 200 SMA), buy when RSI dips under 40 — a shallow pullback. Exit on a bounce above 65 or a break of trend.",
+      "buy": "LTP > SMA200 AND RSI14 < 40",
+      "sell": "RSI14 > 65 OR LTP < SMA200"
+    },
+    {
+      "id": "gap_and_go",
+      "name": "Gap-and-Go Continuation",
+      "category": "Momentum",
+      "source": "popular",
+      "author": "Day-trading community",
+      "tags": ["gap", "momentum", "volume"],
+      "description": "Strong overnight gap on heavy volume with trend behind it. Best on liquid large-caps; watch for fade traps. Exit on a return to opening price or RSI exhaustion.",
+      "buy": "%CHG > 3 AND VOLUME > 2 * AVG_VOLUME AND LTP > SMA50",
+      "sell": "RSI14 > 80 OR CLOSE < OPEN"
+    },
+    {
+      "id": "macd_zero_line_pullback",
+      "name": "MACD Zero-Line Pullback",
+      "category": "Trend Following",
+      "source": "popular",
+      "author": "Linda Raschke / Steve Burns",
+      "tags": ["MACD", "trend"],
+      "description": "In an uptrend, MACD pulls back near zero but stays positive and turns up again. A continuation play. Exit on MACD crossing below signal.",
+      "buy": "MACD > 0 AND MACD < 0.5 AND MACD CROSSOVER SIGNAL AND LTP > SMA50",
+      "sell": "MACD CROSSBELOW SIGNAL"
+    },
+    {
+      "id": "high_dividend_quality",
+      "name": "Dividend Quality Filter",
+      "category": "Income",
+      "source": "popular",
+      "author": "Income investing classic",
+      "tags": ["fundamentals", "income", "quality"],
+      "description": "Screen for companies with attractive dividend yields and reasonable payout (proxied by D/E). Not a fast trading strategy — a buy-and-hold filter.",
+      "buy": "DIVIDEND_YIELD > 2.5 AND DEBT_TO_EQUITY < 1.5 AND ROE > 10",
+      "sell": "DIVIDEND_YIELD < 1.0 OR DEBT_TO_EQUITY > 3.0"
+    },
+    {
+      "id": "atr_breakout",
+      "name": "ATR Breakout (Volatility Expansion)",
+      "category": "Breakout",
+      "source": "popular",
+      "author": "Volatility breakout systems",
+      "tags": ["ATR", "volatility", "breakout"],
+      "description": "Enter when price expands more than 2 ATRs above yesterday's close — strong volatility expansion to the upside.",
+      "buy": "CLOSE > OPEN + 2 * ATR AND LTP > SMA50",
+      "sell": "CLOSE < SMA20 OR RSI14 > 80"
+    }
+  ]
+}
