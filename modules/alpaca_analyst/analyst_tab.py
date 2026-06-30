@@ -42,6 +42,7 @@ try:
     import matplotlib
     matplotlib.use("QtAgg")
     from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg as _FigCanvas
+    from matplotlib.figure import Figure
     from matplotlib.patches import Rectangle
     import matplotlib.dates as mdates
     import matplotlib.ticker as mticker

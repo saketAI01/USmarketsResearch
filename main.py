@@ -230,45 +230,50 @@ class MainWindow(QMainWindow):
             stock_adviser = getattr(stock_sense_page, "stock_adviser_widget", None)
             
             if stock_comp and stock_eval:
-                # When stock_eval changes watchlists -> refresh central_wl, stock_comp, stock_adviser, analyst
+                # When stock_eval changes watchlists -> refresh central_wl, stock_comp, stock_adviser, analyst, screener_page
                 stock_eval.watchlist_changed.connect(central_wl_page.refresh_watchlists)
                 stock_eval.watchlist_changed.connect(stock_comp.refresh_watchlists)
+                stock_eval.watchlist_changed.connect(screener_page.refresh_watchlists_combo)
                 if stock_adviser:
                     stock_eval.watchlist_changed.connect(stock_adviser.handle_external_watchlist_change)
                 if analyst_page:
                     stock_eval.watchlist_changed.connect(analyst_page.refresh_watchlists_combo)
                 
-                # When central_wl changes watchlists -> refresh stock_eval, stock_comp, stock_adviser, analyst
+                # When central_wl changes watchlists -> refresh stock_eval, stock_comp, stock_adviser, analyst, screener_page
                 central_wl_page.watchlist_changed.connect(stock_eval.handle_external_watchlist_change)
                 central_wl_page.watchlist_changed.connect(stock_comp.refresh_watchlists)
+                central_wl_page.watchlist_changed.connect(screener_page.refresh_watchlists_combo)
                 if stock_adviser:
                     central_wl_page.watchlist_changed.connect(stock_adviser.handle_external_watchlist_change)
                 if analyst_page:
                     central_wl_page.watchlist_changed.connect(analyst_page.refresh_watchlists_combo)
             
             if finviz_screener and stock_eval:
-                # When finviz_screener changes watchlists -> refresh central_wl, stock_comp, stock_eval, stock_adviser, analyst
+                # When finviz_screener changes watchlists -> refresh central_wl, stock_comp, stock_eval, stock_adviser, analyst, screener_page
                 finviz_screener.watchlist_changed.connect(central_wl_page.refresh_watchlists)
                 finviz_screener.watchlist_changed.connect(stock_comp.refresh_watchlists)
                 finviz_screener.watchlist_changed.connect(stock_eval.handle_external_watchlist_change)
+                finviz_screener.watchlist_changed.connect(screener_page.refresh_watchlists_combo)
                 if stock_adviser:
                     finviz_screener.watchlist_changed.connect(stock_adviser.handle_external_watchlist_change)
                 if analyst_page:
                     finviz_screener.watchlist_changed.connect(analyst_page.refresh_watchlists_combo)
                     
             if stock_adviser:
-                # When stock_adviser changes watchlists -> refresh central_wl, stock_comp, stock_eval, analyst
+                # When stock_adviser changes watchlists -> refresh central_wl, stock_comp, stock_eval, analyst, screener_page
                 stock_adviser.watchlist_changed.connect(central_wl_page.refresh_watchlists)
                 stock_adviser.watchlist_changed.connect(stock_comp.refresh_watchlists)
                 stock_adviser.watchlist_changed.connect(stock_eval.handle_external_watchlist_change)
+                stock_adviser.watchlist_changed.connect(screener_page.refresh_watchlists_combo)
                 if analyst_page:
                     stock_adviser.watchlist_changed.connect(analyst_page.refresh_watchlists_combo)
 
             if analyst_page:
-                # When analyst changes watchlists -> refresh central_wl, stock_comp, stock_eval, stock_adviser
+                # When analyst changes watchlists -> refresh central_wl, stock_comp, stock_eval, stock_adviser, screener_page
                 analyst_page.watchlist_changed.connect(central_wl_page.refresh_watchlists)
                 analyst_page.watchlist_changed.connect(stock_comp.refresh_watchlists)
                 analyst_page.watchlist_changed.connect(stock_eval.handle_external_watchlist_change)
+                analyst_page.watchlist_changed.connect(screener_page.refresh_watchlists_combo)
                 if stock_adviser:
                     analyst_page.watchlist_changed.connect(stock_adviser.handle_external_watchlist_change)
 
