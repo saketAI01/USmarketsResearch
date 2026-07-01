@@ -7504,7 +7504,6 @@ class AnalystPanel(QWidget):
         self._sector       = SectorAnalystPanel()
         self._fund         = FundamentalAnalysisPanel()
         self._canslim      = CANSLIMProPanel()
-        self._stock_lens   = StockLensPanel()
 
         tabs.addTab(self._tech,         "📈  TECHNALYZE")
         tabs.addTab(self._tech_analyst, "📊  TECH ANALYST")
@@ -7513,12 +7512,9 @@ class AnalystPanel(QWidget):
         tabs.addTab(self._sector,       "🌍  SECTOR ANALYST")
         tabs.addTab(self._fund,         "📉  FUNDANALYZE")
         tabs.addTab(self._canslim,      "🏆  CANSLIMPRO")
-        tabs.addTab(self._stock_lens,   "🔭  STOCK LENS")
         
-        self._stock_lens.go_explore.connect(self.go_explore)
         self._tech.trade_requested.connect(self.trade_requested)
         self._tech_analyst.trade_requested.connect(self.trade_requested)
-        self._stock_lens.trade_requested.connect(self.trade_requested)
         self._vcp.trade_requested.connect(self.trade_requested)
         self._fund.trade_requested.connect(self.trade_requested)
         self._canslim.trade_requested.connect(self.trade_requested)
@@ -7542,7 +7538,6 @@ class AnalystPanel(QWidget):
         self._vcp.set_symbols(symbols)
         self._fund.set_symbols(symbols)
         self._canslim.set_symbols(symbols)
-        self._stock_lens.set_symbols(symbols)
 
     def refresh(self):
         self.refresh_watchlists_combo()

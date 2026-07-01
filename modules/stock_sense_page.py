@@ -1,11 +1,11 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QStackedWidget,
     QFrame, QSizePolicy
 )
 
 from modules.stock_adviser.us_stock_analyzer import StockAnalyzerApp
-
+from modules.alpaca_analyst.analyst_tab import StockLensPanel
 
 class SubtabButton(QPushButton):
     def __init__(self, text, parent=None):
@@ -17,14 +17,21 @@ class SubtabButton(QPushButton):
 
 
 class StockSensePage(QWidget):
+    go_explore = Signal(str)
+    trade_requested = Signal(str, str)
+
     def __init__(self, stock_evaluate_widget, parent=None):
         super().__init__(parent)
         self.setObjectName("stockSensePage")
-        self.SUBTABS = ["Stock Evaluate", "Stock Adviser"]
+        self.SUBTABS = ["Stock Evaluate", "Stock Lens", "Stock Adviser"]
         self._subtab_widgets = {}
         self._subtab_buttons = {}
         self._stock_evaluate_widget = stock_evaluate_widget
+        self.stock_lens_widget = StockLensPanel()
         self.stock_adviser_widget = StockAnalyzerApp()
+
+        self.stock_lens_widget.go_explore.connect(self.go_explore)
+        self.stock_lens_widget.trade_requested.connect(self.trade_requested)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -53,6 +60,9 @@ class StockSensePage(QWidget):
 
         self._subtab_widgets["Stock Evaluate"] = stock_evaluate_widget
         self.stack.addWidget(stock_evaluate_widget)
+
+        self._subtab_widgets["Stock Lens"] = self.stock_lens_widget
+        self.stack.addWidget(self.stock_lens_widget)
 
         self._subtab_widgets["Stock Adviser"] = self.stock_adviser_widget
         self.stack.addWidget(self.stock_adviser_widget)

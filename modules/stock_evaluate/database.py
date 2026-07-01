@@ -52,6 +52,10 @@ class DatabaseManager:
                 INSERT OR IGNORE INTO watchlists (name, is_preset, created_at)
                 VALUES ('My First List', 0, datetime('now'));
             """)
+            try:
+                c.execute("ALTER TABLE watchlist_items ADD COLUMN qty REAL DEFAULT 0")
+            except sqlite3.OperationalError:
+                pass
 
 
 
@@ -297,7 +301,12 @@ class DatabaseManager:
         with self._conn() as c:
             return [dict(r) for r in c.execute("SELECT * FROM watchlists WHERE name LIKE 'US_%' ORDER BY name ASC").fetchall()]
 
-    def add_to_watchlist(self, watchlist_name, symbol, entry_price=None, target=None, stop=None, notes=""):
+    def rename_watchlist(self, old_name, new_name):
+        with self._conn() as c:
+            c.execute("UPDATE watchlists SET name=? WHERE name=?", (new_name, old_name))
+            c.execute("UPDATE watchlist_items SET watchlist_name=? WHERE watchlist_name=?", (new_name, old_name))
+
+    def add_to_watchlist(self, watchlist_name, symbol, entry_price=None, target=None, stop=None, notes="", qty=0.0):
         try:
             import nuvama_watchlist_db as wl_db
             if watchlist_name.startswith("US_"):
@@ -308,13 +317,14 @@ class DatabaseManager:
             pass
         with self._conn() as c:
             c.execute("""INSERT INTO watchlist_items 
-                (watchlist_name, symbol, added_date, entry_price, target_price, stop_loss, notes)
-                VALUES (?,?,?,?,?,?,?) ON CONFLICT(watchlist_name, symbol) DO UPDATE SET
+                (watchlist_name, symbol, added_date, entry_price, target_price, stop_loss, notes, qty)
+                VALUES (?,?,?,?,?,?,?,?) ON CONFLICT(watchlist_name, symbol) DO UPDATE SET
                 entry_price=COALESCE(excluded.entry_price, entry_price),
                 target_price=COALESCE(excluded.target_price, target_price),
                 stop_loss=COALESCE(excluded.stop_loss, stop_loss),
+                qty=COALESCE(excluded.qty, qty),
                 notes=COALESCE(excluded.notes, notes)""",
-                (watchlist_name, symbol, datetime.utcnow().isoformat(), entry_price, target, stop, notes))
+                (watchlist_name, symbol, datetime.utcnow().isoformat(), entry_price, target, stop, notes, qty))
 
     def remove_from_watchlist(self, watchlist_name, symbol):
         try:
@@ -345,6 +355,13 @@ class DatabaseManager:
             elif preset_type == "Cap Segment":
                 return [r["symbol"] for r in c.execute("SELECT symbol FROM constituents WHERE cap_segment=?", (value,)).fetchall()]
         return []
+
+    def update_portfolio_item(self, watchlist_name, symbol, qty, cost):
+        with self._conn() as c:
+            c.execute("""UPDATE watchlist_items 
+                         SET qty=?, entry_price=? 
+                         WHERE watchlist_name=? AND symbol=?""",
+                      (qty, cost, watchlist_name, symbol))
 
     def update_watchlist_item_field(self, watchlist_name, symbol, field, value):
         allowed = {"entry_price", "target_price", "stop_loss", "notes"}

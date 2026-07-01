@@ -34,7 +34,7 @@ ANCIENT_GOLD = "#C9A84C"   # ancient gold bar fill
 TEXT_PRIMARY = "#E2E8F0"
 TEXT_SECONDARY = "#94A3B8"
 
-PORTFOLIO_WL = "US_Portfolio"
+
 
 # Column indices
 COL_SYM  = 0
@@ -184,33 +184,23 @@ class PortfolioFetchWorker(QThread):
 
 
 # ── Main Page ────────────────────────────────────────────────────────
-class PortfolioPage(QWidget):
+
+from PySide6.QtWidgets import QTabWidget, QInputDialog, QMenu, QTabBar
+from datetime import datetime
+
+class PortfolioTabView(QWidget):
     go_explore = Signal(str)
 
-    def __init__(self, parent=None):
+    def __init__(self, portfolio_name, master_data, parent=None):
         super().__init__(parent)
+        self.portfolio_name = portfolio_name
         self.db = DatabaseManager()
-        self.master_data: dict = {}
+        self.master_data = master_data
         self._fetch_worker = None
-        self._market_data: dict = {}   # sym -> live data dict
-        self._load_master_csv()
+        self._market_data: dict = {}
         self._setup_ui()
         QTimer.singleShot(500, self.refresh)
 
-    # ── CSV ──────────────────────────────────────────────────────────
-    def _load_master_csv(self):
-        path = Path(__file__).resolve().parent.parent / "USStockMaster.csv"
-        if not path.exists():
-            return
-        try:
-            with open(str(path), mode="r", encoding="utf-8") as f:
-                for row in csv.DictReader(f):
-                    sym = row["Symbol"].upper()
-                    self.master_data[sym] = row.get("Company", row.get("Name", ""))
-        except Exception:
-            pass
-
-    # ── UI ───────────────────────────────────────────────────────────
     def _setup_ui(self):
         root = QVBoxLayout(self)
         root.setContentsMargins(0, 0, 0, 0)
@@ -219,15 +209,9 @@ class PortfolioPage(QWidget):
         # ── Top bar ──────────────────────────────────────────────────
         top_bar = QFrame()
         top_bar.setFixedHeight(48)
-        top_bar.setStyleSheet(
-            f"background:{BG_SURFACE}; border-bottom:1px solid {BORDER};")
+        top_bar.setStyleSheet(f"background:{BG_SURFACE}; border-bottom:1px solid {BORDER};")
         tl = QHBoxLayout(top_bar)
         tl.setContentsMargins(16, 0, 16, 0)
-
-        title = QLabel("Portfolio")
-        title.setFont(QFont("Segoe UI", 14, QFont.Bold))
-        title.setStyleSheet(f"color:{ACCENT}; border:none;")
-        tl.addWidget(title)
 
         self.status_lbl = QLabel("")
         self.status_lbl.setStyleSheet(f"color:{TEXT_SECONDARY}; border:none;")
@@ -262,17 +246,14 @@ class PortfolioPage(QWidget):
         self.table.verticalHeader().setVisible(False)
         self.table.setAlternatingRowColors(True)
         self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.table.setEditTriggers(QAbstractItemView.DoubleClicked |
-                                   QAbstractItemView.SelectedClicked)
+        self.table.setEditTriggers(QAbstractItemView.DoubleClicked | QAbstractItemView.SelectedClicked)
 
         hdr = self.table.horizontalHeader()
-        # fixed-width cols; COL_CHG widened to avoid clipping
         for col, w in [(COL_SYM, 80), (COL_CHG, 92), (COL_QTY, 80),
                        (COL_COST, 92), (COL_INV, 96), (COL_CUR, 96),
                        (COL_PNL, 92), (COL_PNLP, 82)]:
             hdr.setSectionResizeMode(col, QHeaderView.Fixed)
             self.table.setColumnWidth(col, w)
-        # company: fixed narrow; range bar + price: stretch/fixed
         hdr.setSectionResizeMode(COL_COMP, QHeaderView.Fixed)
         self.table.setColumnWidth(COL_COMP, 155)
         hdr.setSectionResizeMode(COL_PRC, QHeaderView.Fixed)
@@ -295,13 +276,11 @@ class PortfolioPage(QWidget):
             }}
         """)
 
-        # Delegates for editable columns
-        self._qty_delegate  = SpinDelegate(decimals=0, max_val=1_000_000)
+        self._qty_delegate  = SpinDelegate(decimals=4, max_val=1_000_000)
         self._cost_delegate = SpinDelegate(decimals=2, max_val=1_000_000)
         self.table.setItemDelegateForColumn(COL_QTY,  self._qty_delegate)
         self.table.setItemDelegateForColumn(COL_COST, self._cost_delegate)
 
-        # Recalculate P&L whenever QTY or Cost is edited
         self.table.itemChanged.connect(self._on_item_changed)
         self.table.itemSelectionChanged.connect(self._on_row_selected)
         self.table.doubleClicked.connect(self._on_double_clicked)
@@ -309,8 +288,7 @@ class PortfolioPage(QWidget):
         # ── Summary cards row ────────────────────────────────────────
         cards_bar = QFrame()
         cards_bar.setFixedHeight(56)
-        cards_bar.setStyleSheet(
-            f"background:{BG_CARD}; border-bottom:1px solid {BORDER};")
+        cards_bar.setStyleSheet(f"background:{BG_CARD}; border-bottom:1px solid {BORDER};")
         cl = QHBoxLayout(cards_bar)
         cl.setContentsMargins(12, 6, 12, 6)
         cl.setSpacing(10)
@@ -318,16 +296,14 @@ class PortfolioPage(QWidget):
         def _make_card(label):
             card = QFrame()
             card.setStyleSheet(
-                f"background:{BG_SURFACE}; border:1px solid {BORDER};"
-                f"border-radius:6px;")
+                f"background:{BG_SURFACE}; border:1px solid {BORDER}; border-radius:6px;")
             card.setMinimumWidth(140)
             vl = QVBoxLayout(card)
             vl.setContentsMargins(10, 4, 10, 4)
             vl.setSpacing(1)
             lbl = QLabel(label)
             lbl.setStyleSheet(
-                f"color:{TEXT_SECONDARY}; font-size:9px; font-weight:600;"
-                f"letter-spacing:1px; border:none;")
+                f"color:{TEXT_SECONDARY}; font-size:9px; font-weight:600; letter-spacing:1px; border:none;")
             val = QLabel("—")
             val.setFont(QFont("Segoe UI", 12, QFont.Bold))
             val.setStyleSheet(f"color:{TEXT_PRIMARY}; border:none;")
@@ -350,8 +326,7 @@ class PortfolioPage(QWidget):
         # ── Slim bottom detail bar ───────────────────────────────────
         self.bottom_bar = QFrame()
         self.bottom_bar.setFixedHeight(34)
-        self.bottom_bar.setStyleSheet(
-            f"background:{BG_CARD}; border-top:1px solid {BORDER};")
+        self.bottom_bar.setStyleSheet(f"background:{BG_CARD}; border-top:1px solid {BORDER};")
         bl = QHBoxLayout(self.bottom_bar)
         bl.setContentsMargins(12, 0, 12, 0)
         bl.setSpacing(20)
@@ -359,8 +334,7 @@ class PortfolioPage(QWidget):
         def _detail_lbl(text="", accent=False):
             l = QLabel(text)
             l.setStyleSheet(
-                f"color:{''+ACCENT if accent else TEXT_SECONDARY}; "
-                f"font-size:11px; border:none;")
+                f"color:{''+ACCENT if accent else TEXT_SECONDARY}; font-size:11px; border:none;")
             return l
 
         self.det_sym     = _detail_lbl("—", accent=True)
@@ -379,23 +353,27 @@ class PortfolioPage(QWidget):
         hint = _detail_lbl("Select a row to view details")
         bl.addWidget(hint)
         self.det_hint = hint
-
         root.addWidget(self.bottom_bar)
 
-    # ── Data helpers ─────────────────────────────────────────────────
     def _get_portfolio_symbols(self):
         try:
-            return [i["symbol"] for i in self.db.get_watchlist_items(PORTFOLIO_WL)]
+            items = self.db.get_watchlist_items(self.portfolio_name)
+            return [i["symbol"] for i in items]
         except Exception:
             return []
+            
+    def _get_portfolio_items(self):
+        try:
+            return {i["symbol"]: i for i in self.db.get_watchlist_items(self.portfolio_name)}
+        except Exception:
+            return {}
 
-    # ── Refresh ──────────────────────────────────────────────────────
     def refresh(self):
         symbols = self._get_portfolio_symbols()
         if not symbols:
-            self.status_lbl.setText(
-                "Portfolio empty — copy symbols from the Watchlist tab.")
+            self.status_lbl.setText("Portfolio empty — copy symbols from the Watchlist tab.")
             self.table.setRowCount(0)
+            self._update_summary()
             return
         if self._fetch_worker and self._fetch_worker.isRunning():
             return
@@ -406,8 +384,7 @@ class PortfolioPage(QWidget):
         self._fetch_worker = PortfolioFetchWorker(symbols, self.master_data)
         self._fetch_worker.progress.connect(self._on_progress)
         self._fetch_worker.result.connect(self._on_result)
-        self._fetch_worker.error.connect(
-            lambda m: QMessageBox.warning(self, "Error", m))
+        self._fetch_worker.error.connect(lambda m: QMessageBox.warning(self, "Error", m))
         self._fetch_worker.finished.connect(self._on_finished)
         self._fetch_worker.start()
 
@@ -424,26 +401,14 @@ class PortfolioPage(QWidget):
         self.progress.setVisible(False)
         self.status_lbl.setText(f"{self.table.rowCount()} symbols loaded")
 
-    # ── Table population ─────────────────────────────────────────────
     def _populate(self, results: dict):
         try:
             self.table.itemChanged.disconnect(self._on_item_changed)
         except RuntimeError:
             pass
         self.table.setSortingEnabled(False)
-
-        # Preserve any QTY / Cost the user already entered
-        saved = {}
-        for r in range(self.table.rowCount()):
-            si = self.table.item(r, COL_SYM)
-            qi = self.table.item(r, COL_QTY)
-            ci = self.table.item(r, COL_COST)
-            if si:
-                sym = si.text()
-                saved[sym] = {
-                    "qty":  qi.data(Qt.UserRole) if qi else 0.0,
-                    "cost": ci.data(Qt.UserRole) if ci else 0.0,
-                }
+        
+        db_items = self._get_portfolio_items()
 
         data_list = list(results.values())
         self.table.setRowCount(len(data_list))
@@ -459,7 +424,6 @@ class PortfolioPage(QWidget):
             high  = d.get("high", 0.0)
             comp  = d.get("company", "")
 
-            # helper to make a non-editable centred item
             def _ro(text, sort_val=None, font=norm):
                 it = QTableWidgetItem(text)
                 it.setTextAlignment(Qt.AlignCenter)
@@ -469,61 +433,50 @@ class PortfolioPage(QWidget):
                     it.setData(Qt.UserRole, sort_val)
                 return it
 
-            # Symbol
             si = _ro(sym, font=bold)
             si.setForeground(QBrush(QColor(ACCENT)))
             self.table.setItem(row, COL_SYM, si)
 
-            # Company (left-aligned, stretchable)
             ci_item = QTableWidgetItem(comp)
             ci_item.setFont(norm)
             ci_item.setFlags(ci_item.flags() & ~Qt.ItemIsEditable)
             self.table.setItem(row, COL_COMP, ci_item)
 
-            # Price
             pi = _ro(f"${price:,.2f}", price, font=bold)
             self.table.setItem(row, COL_PRC, pi)
 
-            # % Change
             sign = "+" if pct > 0 else ""
             chg_it = _ro(f"{sign}{pct:.2f}%", pct, font=bold)
-            chg_it.setForeground(
-                QBrush(QColor(SUCCESS if pct > 0 else (DANGER if pct < 0 else TEXT_SECONDARY))))
+            chg_it.setForeground(QBrush(QColor(SUCCESS if pct > 0 else (DANGER if pct < 0 else TEXT_SECONDARY))))
             self.table.setItem(row, COL_CHG, chg_it)
 
-            # Price Range widget (bracketed bar)
             rng_placeholder = QTableWidgetItem()
             rng_placeholder.setFlags(rng_placeholder.flags() & ~Qt.ItemIsEditable)
             if high != low:
                 rng_placeholder.setData(Qt.UserRole, (price - low) / (high - low))
             self.table.setItem(row, COL_RNG, rng_placeholder)
-            self.table.setCellWidget(row, COL_RNG,
-                                     RangeBarWidget(low, price, high))
-
-            # QTY (editable)
-            prev = saved.get(sym, {})
-            qty_val  = prev.get("qty", 0.0)
-            cost_val = prev.get("cost", 0.0)
+            self.table.setCellWidget(row, COL_RNG, RangeBarWidget(low, price, high))
+            
+            db_item = db_items.get(sym, {})
+            qty_val  = float(db_item.get("qty") or 0.0)
+            cost_val = float(db_item.get("entry_price") or 0.0)
 
             qty_it = QTableWidgetItem()
             qty_it.setTextAlignment(Qt.AlignCenter)
             qty_it.setFont(norm)
-            qty_it.setData(Qt.UserRole, float(qty_val))
-            qty_it.setData(Qt.DisplayRole, f"{int(qty_val)}" if qty_val == int(qty_val)
-                           else f"{qty_val:.2f}")
+            qty_it.setData(Qt.UserRole, qty_val)
+            qty_it.setData(Qt.DisplayRole, f"{int(qty_val)}" if qty_val == int(qty_val) else f"{qty_val:.4f}".rstrip('0').rstrip('.'))
             qty_it.setBackground(QBrush(QColor(BG_CARD)))
             self.table.setItem(row, COL_QTY, qty_it)
 
-            # Cost/Share (editable)
             cost_it = QTableWidgetItem()
             cost_it.setTextAlignment(Qt.AlignCenter)
             cost_it.setFont(norm)
-            cost_it.setData(Qt.UserRole, float(cost_val))
+            cost_it.setData(Qt.UserRole, cost_val)
             cost_it.setData(Qt.DisplayRole, f"${cost_val:,.2f}")
             cost_it.setBackground(QBrush(QColor(BG_CARD)))
             self.table.setItem(row, COL_COST, cost_it)
 
-            # P&L & %P&L (calculated)
             self._update_pnl_row(row, price, qty_val, cost_val)
 
         self.table.setSortingEnabled(True)
@@ -531,9 +484,7 @@ class PortfolioPage(QWidget):
         self.table.itemChanged.connect(self._on_item_changed)
         self._update_summary()
 
-    # ── P&L helpers ──────────────────────────────────────────────────
-    def _update_pnl_row(self, row: int, price: float,
-                        qty: float, cost: float):
+    def _update_pnl_row(self, row: int, price: float, qty: float, cost: float):
         bold = QFont("Segoe UI", 11, QFont.Bold)
 
         def _ro_item(text, val, color=None):
@@ -556,23 +507,14 @@ class PortfolioPage(QWidget):
 
         pnl_col = SUCCESS if pnl_dollar >= 0 else DANGER
 
-        # Invested
-        self.table.setItem(row, COL_INV,
-            _ro_item(f"${invested:,.2f}", invested, TEXT_SECONDARY))
-
-        # Current Value
-        self.table.setItem(row, COL_CUR,
-            _ro_item(f"${cur_value:,.2f}", cur_value, TEXT_PRIMARY))
-
-        # P&L $
+        self.table.setItem(row, COL_INV, _ro_item(f"${invested:,.2f}", invested, TEXT_SECONDARY))
+        self.table.setItem(row, COL_CUR, _ro_item(f"${cur_value:,.2f}", cur_value, TEXT_PRIMARY))
+        
         sign = '+' if pnl_dollar >= 0 else ''
-        self.table.setItem(row, COL_PNL,
-            _ro_item(f"{sign}${pnl_dollar:,.2f}", pnl_dollar, pnl_col))
-
-        # P&L %
+        self.table.setItem(row, COL_PNL, _ro_item(f"{sign}${pnl_dollar:,.2f}", pnl_dollar, pnl_col))
+        
         sign = '+' if pnl_pct >= 0 else ''
-        self.table.setItem(row, COL_PNLP,
-            _ro_item(f"{sign}{pnl_pct:.2f}%", pnl_pct, pnl_col))
+        self.table.setItem(row, COL_PNLP, _ro_item(f"{sign}{pnl_pct:.2f}%", pnl_pct, pnl_col))
 
     def _on_item_changed(self, item: QTableWidgetItem):
         col = item.column()
@@ -587,25 +529,24 @@ class PortfolioPage(QWidget):
             return
 
         price = prc_it.data(Qt.UserRole) or 0.0
-
-        qty_raw  = qty_it.data(Qt.UserRole)
-        cost_raw = cost_it.data(Qt.UserRole)
         try:
-            qty  = float(qty_raw)
-            cost = float(cost_raw)
+            qty  = float(qty_it.data(Qt.UserRole))
+            cost = float(cost_it.data(Qt.UserRole))
         except (TypeError, ValueError):
             return
 
-        # Update display text neatly
+        # Save to database
+        sym = sym_it.text()
+        if hasattr(self.db, 'update_portfolio_item'):
+            self.db.update_portfolio_item(self.portfolio_name, sym, qty, cost)
+
         self.table.blockSignals(True)
-        qty_it.setData(Qt.DisplayRole,
-                       f"{int(qty)}" if qty == int(qty) else f"{qty:.2f}")
+        qty_it.setData(Qt.DisplayRole, f"{int(qty)}" if qty == int(qty) else f"{qty:.4f}".rstrip('0').rstrip('.'))
         cost_it.setData(Qt.DisplayRole, f"${cost:,.2f}")
         self._update_pnl_row(row, price, qty, cost)
         self.table.blockSignals(False)
         self._update_summary()
 
-    # ── Summary cards ─────────────────────────────────────────────────
     def _update_summary(self):
         total_inv = total_cur = 0.0
         for r in range(self.table.rowCount()):
@@ -613,12 +554,10 @@ class PortfolioPage(QWidget):
             cur_it = self.table.item(r, COL_CUR)
             if inv_it:
                 v = inv_it.data(Qt.UserRole)
-                if v:
-                    total_inv += float(v)
+                if v: total_inv += float(v)
             if cur_it:
                 v = cur_it.data(Qt.UserRole)
-                if v:
-                    total_cur += float(v)
+                if v: total_cur += float(v)
 
         total_pnl  = total_cur - total_inv
         total_pnlp = (total_pnl / total_inv * 100) if total_inv else 0.0
@@ -626,23 +565,12 @@ class PortfolioPage(QWidget):
         sign       = '+' if total_pnl >= 0 else ''
 
         self.card_invested.setText(f"${total_inv:,.2f}")
-        self.card_invested.setStyleSheet(f"color:{TEXT_PRIMARY}; border:none;")
-
         self.card_current.setText(f"${total_cur:,.2f}")
-        self.card_current.setStyleSheet(f"color:{TEXT_PRIMARY}; border:none;")
-
         self.card_pnl.setText(f"{sign}${total_pnl:,.2f}")
-        self.card_pnl.setStyleSheet(
-            f"color:{pnl_col}; font-size:12px; font-weight:bold; border:none;")
-        self.card_pnl.setFont(QFont("Segoe UI", 12, QFont.Bold))
+        self.card_pnl.setStyleSheet(f"color:{pnl_col}; font-size:12px; font-weight:bold; border:none;")
+        self.card_pnlp.setText(f"{sign}{total_pnlp:.2f}%")
+        self.card_pnlp.setStyleSheet(f"color:{pnl_col}; font-size:12px; font-weight:bold; border:none;")
 
-        sign2 = '+' if total_pnlp >= 0 else ''
-        self.card_pnlp.setText(f"{sign2}{total_pnlp:.2f}%")
-        self.card_pnlp.setStyleSheet(
-            f"color:{pnl_col}; font-size:12px; font-weight:bold; border:none;")
-        self.card_pnlp.setFont(QFont("Segoe UI", 12, QFont.Bold))
-
-    # ── Bottom detail bar update ──────────────────────────────────────
     def _on_row_selected(self):
         rows = self.table.selectionModel().selectedRows()
         if not rows:
@@ -652,7 +580,6 @@ class PortfolioPage(QWidget):
         def _txt(col):
             it = self.table.item(row, col)
             return it.text() if it else "—"
-
         def _val(col):
             it = self.table.item(row, col)
             return it.data(Qt.UserRole) if it else 0.0
@@ -676,14 +603,12 @@ class PortfolioPage(QWidget):
         self.det_price.setText(f"Price: {prc}")
         self.det_change.setText(f"{sign}{pct:.2f}%")
         col = SUCCESS if pct >= 0 else DANGER
-        self.det_change.setStyleSheet(
-            f"color:{col}; font-size:11px; font-weight:bold; border:none;")
+        self.det_change.setStyleSheet(f"color:{col}; font-size:11px; font-weight:bold; border:none;")
         self.det_range.setText(f"Range: ${low:,.2f} – ${high:,.2f}")
         self.det_pnl.setText(f"Invested: {inv}  •  Value: {cur}  •  P&L: {pnl} ({pnlp})")
         pnl_val = _val(COL_PNL)
         pcol = SUCCESS if pnl_val >= 0 else DANGER
-        self.det_pnl.setStyleSheet(
-            f"color:{pcol}; font-size:11px; font-weight:bold; border:none;")
+        self.det_pnl.setStyleSheet(f"color:{pcol}; font-size:11px; font-weight:bold; border:none;")
 
     def _on_double_clicked(self, idx):
         if idx.column() == COL_SYM:
@@ -693,3 +618,195 @@ class PortfolioPage(QWidget):
                 if symbol:
                     self.go_explore.emit(symbol)
         self.det_hint.setVisible(False)
+
+
+class PortfolioPage(QWidget):
+    go_explore = Signal(str)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.db = DatabaseManager()
+        self.master_data: dict = {}
+        self._load_master_csv()
+        self._setup_ui()
+        QTimer.singleShot(100, self.load_portfolios)
+
+    def _load_master_csv(self):
+        import csv
+        from pathlib import Path
+        path = Path(__file__).resolve().parent.parent / "USStockMaster.csv"
+        if not path.exists():
+            return
+        try:
+            with open(str(path), mode="r", encoding="utf-8") as f:
+                for row in csv.DictReader(f):
+                    sym = row["Symbol"].upper()
+                    self.master_data[sym] = row.get("Company", row.get("Name", ""))
+        except Exception:
+            pass
+
+    def _setup_ui(self):
+        root = QVBoxLayout(self)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        # Main Tab Widget
+        self.tab_widget = QTabWidget()
+        self.tab_widget.setTabsClosable(True)
+        self.tab_widget.tabCloseRequested.connect(self._on_tab_close)
+        
+        # Double-click tab to rename
+        self.tab_widget.tabBar().setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tab_widget.tabBar().customContextMenuRequested.connect(self._show_tab_menu)
+        self.tab_widget.tabBarDoubleClicked.connect(self._on_tab_double_click)
+        
+        self.tab_widget.setStyleSheet(f"""
+            QTabWidget::pane {{ border: none; }}
+            QTabBar::tab {{
+                background: {BG_SURFACE};
+                color: {TEXT_SECONDARY};
+                padding: 8px 16px;
+                border: 1px solid {BORDER};
+                border-bottom: none;
+                border-top-left-radius: 4px;
+                border-top-right-radius: 4px;
+                font-size: 12px;
+                font-weight: bold;
+            }}
+            QTabBar::tab:selected {{
+                background: {BG_CARD};
+                color: {ACCENT};
+                border-bottom: 2px solid {ACCENT};
+            }}
+            QTabBar::tab:hover {{
+                background: {BG_CARD};
+            }}
+        """)
+
+        root.addWidget(self.tab_widget)
+
+    def load_portfolios(self):
+        self.tab_widget.blockSignals(True)
+        self.tab_widget.clear()
+        self.tab_widget.blockSignals(False)
+        
+        with self.db._conn() as c:
+            rows = c.execute("SELECT name FROM watchlists WHERE name LIKE 'US_Portfolio_%' ORDER BY name ASC").fetchall()
+            portfolio_names = [r["name"] for r in rows]
+
+        if not portfolio_names:
+            default_name = "US_Portfolio_Main"
+            with self.db._conn() as c:
+                c.execute("INSERT OR IGNORE INTO watchlists (name, is_preset, created_at) VALUES (?, 0, ?)",
+                          (default_name, datetime.utcnow().isoformat()))
+            portfolio_names = [default_name]
+
+        for name in portfolio_names:
+            self._add_portfolio_tab(name)
+            
+        # Add a '+' tab
+        self._add_plus_tab()
+
+    def _add_portfolio_tab(self, name):
+        view = PortfolioTabView(name, self.master_data, self)
+        view.go_explore.connect(self.go_explore.emit)
+        display_name = name.replace("US_Portfolio_", "")
+        idx = self.tab_widget.addTab(view, display_name)
+        return idx
+        
+    def _add_plus_tab(self):
+        # We add a dummy widget for the + button
+        dummy = QWidget()
+        idx = self.tab_widget.addTab(dummy, "+")
+        self.tab_widget.tabBar().setTabButton(idx, QTabBar.RightSide, None)
+        # Avoid connecting multiple times
+        try:
+            self.tab_widget.currentChanged.disconnect(self._on_tab_changed)
+        except:
+            pass
+        self.tab_widget.currentChanged.connect(self._on_tab_changed)
+        
+    def _on_tab_changed(self, index):
+        if index < 0: return
+        if index == self.tab_widget.count() - 1:
+            # Revert to previous safely
+            self.tab_widget.blockSignals(True)
+            self.tab_widget.setCurrentIndex(max(0, index - 1))
+            self.tab_widget.blockSignals(False)
+            self._create_new_portfolio()
+
+    def _create_new_portfolio(self):
+        dialog = QInputDialog(self)
+        dialog.setWindowTitle("New Portfolio")
+        dialog.setLabelText("Enter portfolio name:")
+        dialog.setStyleSheet("QLineEdit { color: #000000; background-color: #FFFFFF; }")
+        ok = dialog.exec()
+        name = dialog.textValue() if ok else "" 
+        if ok and name.strip():
+            full_name = f"US_Portfolio_{name.strip()}"
+            with self.db._conn() as c:
+                c.execute("INSERT OR IGNORE INTO watchlists (name, is_preset, created_at) VALUES (?, 0, ?)",
+                          (full_name, datetime.utcnow().isoformat()))
+            self.load_portfolios()
+            # Select the new one
+            for i in range(self.tab_widget.count() - 1):
+                if self.tab_widget.tabText(i) == name.strip():
+                    self.tab_widget.setCurrentIndex(i)
+                    break
+
+    def _on_tab_close(self, index):
+        if index == self.tab_widget.count() - 1: return # The + tab
+        view = self.tab_widget.widget(index)
+        name = view.portfolio_name
+        
+        reply = QMessageBox.question(self, "Delete Portfolio",
+                                     f"Are you sure you want to delete '{name}'?",
+                                     QMessageBox.Yes | QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            with self.db._conn() as c:
+                c.execute("DELETE FROM watchlists WHERE name=?", (name,))
+                c.execute("DELETE FROM watchlist_items WHERE watchlist_name=?", (name,))
+            self.load_portfolios()
+
+    def _on_tab_double_click(self, index):
+        if index < 0 or index == self.tab_widget.count() - 1: return
+        view = self.tab_widget.widget(index)
+        old_full_name = view.portfolio_name
+        old_display_name = old_full_name.replace("US_Portfolio_", "")
+        
+        dialog = QInputDialog(self)
+        dialog.setWindowTitle("Rename Portfolio")
+        dialog.setLabelText("New name:")
+        dialog.setTextValue(old_display_name)
+        dialog.setStyleSheet("QLineEdit { color: #000000; background-color: #FFFFFF; }")
+        ok = dialog.exec()
+        new_display_name = dialog.textValue() if ok else "" 
+        if ok and new_display_name.strip() and new_display_name.strip() != old_display_name:
+            new_full_name = f"US_Portfolio_{new_display_name.strip()}"
+            if hasattr(self.db, 'rename_watchlist'):
+                self.db.rename_watchlist(old_full_name, new_full_name)
+            self.load_portfolios()
+            for i in range(self.tab_widget.count() - 1):
+                if self.tab_widget.tabText(i) == new_display_name.strip():
+                    self.tab_widget.setCurrentIndex(i)
+                    break
+
+    def _show_tab_menu(self, pos):
+        index = self.tab_widget.tabBar().tabAt(pos)
+        if index < 0 or index == self.tab_widget.count() - 1: return
+        
+        menu = QMenu(self)
+        rename_act = menu.addAction("Rename Portfolio")
+        delete_act = menu.addAction("Delete Portfolio")
+        
+        action = menu.exec(self.tab_widget.tabBar().mapToGlobal(pos))
+        if action == rename_act:
+            self._on_tab_double_click(index)
+        elif action == delete_act:
+            self._on_tab_close(index)
+            
+    def refresh(self):
+        # Trigger refresh on current tab
+        idx = self.tab_widget.currentIndex()
+        if idx >= 0 and idx < self.tab_widget.count() - 1:
+            self.tab_widget.widget(idx).refresh()
